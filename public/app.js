@@ -63,8 +63,10 @@ async function renderZonesChart() {
     type: 'bar',
     data: {
       labels: data.map(z => `Z${z.zone} ${z.name}`),
-      data: data.map(z => z.minutes),
-      backgroundColor: data.map(z => z.color)
+      datasets: [{
+        data: data.map(z => z.minutes),
+        backgroundColor: data.map(z => z.color)
+      }]
     }
   })
 }
