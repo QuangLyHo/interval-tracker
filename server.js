@@ -1,7 +1,8 @@
-import 'dotenv/config';
-import express from 'express'
-import fetch from 'node-fetch'
-import { generateFitnessData, powerZones, summary } from './data/mock.js'
+import dotenv from 'dotenv';
+dotenv.config({ override: true });
+import express from 'express';
+import fetch from 'node-fetch';
+import { generateFitnessData, powerZones, summary } from './data/mock.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -44,6 +45,46 @@ app.get('/api/zones', (req, res) => {
 });
 
 // ── Route 3: GET /api/insight ──────────────────────────────────────────
+
+app.get('/api/insight', async (req, res) => {
+    const anthropicKey = process.env.ANTHROPIC_API_KEY;
+    const url = 'https://api.anthropic.com/v1/messages';
+
+    const prompt = `
+        You are a cycling coach, based on this athlete's training data, give me 2-3 sentence insight and one specific recommendation.
+
+        totalHours: ${summary.totalHours},
+        currentCTL: ${summary.currentCTL},
+        currentATL: ${summary.currentATL},
+        currentTSB: ${summary.currentTSB},
+        dominantZone: ${summary.dominantZone},
+        recentWorkouts: ${summary.recentWorkouts},
+    `;
+
+    const resp = await fetch(url, {
+        method: 'POST',
+        headers: {
+            'x-api-key': anthropicKey,
+            'anthropic-version': '2023-06-01',
+            'content-type': 'application/json'
+        },
+        body: JSON.stringify({
+            model: 'claude-opus-4-5',
+            max_tokens: 200,
+            messages: [
+                {role: 'user', content: prompt}
+            ]
+        })
+    })
+
+    const data = await resp.json();
+
+    if (data.error) {
+        return res.json({insight: `API error: ${data.error.messages}`});
+    }
+    const insight = data.content[0].text;
+    res.json({insight: insight});
+})
 
 // ── Utility ───────────────────────────────────────────────────────────
 function ninetyDaysAgo() {

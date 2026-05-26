@@ -8,9 +8,9 @@ async function renderFitnessChart() {
   const data = await fetchJSON('/api/fitness');
 
   const labels = data.map(d => d.date)
-  const ctl = data.map(c => c.ctl)
-  const atl = data.map(a => a.atl)
-  const tsb = data.map(t => t.tsb)
+  const ctl = data.map(c => c.ctl = Math.round(c.ctl * 10) / 10)
+  const atl = data.map(a => a.atl = Math.round(a.atl * 10) / 10)
+  const tsb = data.map(t => t.tsb = Math.round(t.tsb * 10) / 10)
   const last = data[data.length - 1]
 
   const ctlE1 = document.getElementById('stat-ctl')
@@ -74,7 +74,7 @@ async function renderZonesChart() {
 
 async function renderInsight() {
   const data = await fetchJSON('/api/insight')
-  document.getElementById('insight-text').textContent = data.insight
+  document.getElementById('insight-text').innerHTML = marked.parse(data.insight);
 }
 
 async function fetchJSON(url) {
