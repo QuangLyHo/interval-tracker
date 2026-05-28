@@ -50,8 +50,13 @@ app.get('/api/insight', async (req, res) => {
     const anthropicKey = process.env.ANTHROPIC_API_KEY;
     const url = 'https://api.anthropic.com/v1/messages';
 
-    const {ctl, atl, tsb} = await fetchLatestStats();
-    const activities = await fetchStravaActivities();
+    const {ctl, atl, tsb}   = await fetchLatestStats();
+    const activities        = await fetchStravaActivities();
+    const ftp               = await fetchFTP();
+
+    const rideIntensities = activities.map(act=> ({
+        if: act.weighted_average_watts ? (act.weighted_average_watts / ftp).toFixed(2) : 'no power data'
+    }))
 
     const totalHours = (activities.reduce((sum, a) => sum + a.moving_time, 0) / 3600).toFixed(1);
 
@@ -62,6 +67,7 @@ app.get('/api/insight', async (req, res) => {
         currentCTL: ${ctl},
         currentATL: ${atl},
         currentTSB: ${tsb},
+        recent ride intensities: ${rideIntensities.map(r => `IF: ${r.if}`).join('\n')}
     `;
 
     const resp = await fetch(url, {
@@ -129,7 +135,7 @@ async function fetchFTP() {
 
     return data.sportSettings[0].ftp
 }
-fetchFTP();
+
 async function fetchLatestStats() {
     const resp = await fetch(`${base_url}/wellness?oldest=${ninetyDaysAgo()}`, 
                             { headers: {Authorization: auth} });
@@ -147,13 +153,12 @@ async function fetchStravaActivities() {
                                 headers: { Authorization: `Bearer ${token}`}
     })
     const raw = await resp.json();
-    const extractedData = await raw.map(act => ({
-        distance: act.distance,
-        moving_time: act.moving_time
+    // const extractedData = await raw.map(act => ({
+    //     distance: act.distance,
+    //     moving_time: act.moving_time
 
-    }))
-
-    return await extractedData;
+    // }))
+    return await raw;
 }
 
 async function getStravaToken() {
