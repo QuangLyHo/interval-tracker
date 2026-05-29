@@ -67,6 +67,17 @@ async function renderZonesChart() {
         data: data.map(z => z.minutes),
         backgroundColor: data.map(z => z.color)
       }]
+    },
+    options: {
+      scales: {
+        y: {
+          title: {
+            display: true,
+            align: 'center',
+            text: 'Minutes'
+          }
+        }
+      }
     }
   })
 }
