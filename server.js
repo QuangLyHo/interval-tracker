@@ -40,8 +40,10 @@ app.get('/api/fitness', async (req, res) => {
 });
 
 //get power zones
-app.get('/api/zones', (req, res) => {
-  res.json(powerZones);
+app.get('/api/zones', async (req, res) => {
+    //   res.json(powerZones);
+    const zones = await fetchPowerZones();
+    res.json(zones);
 });
 
 // ── Route 3: GET /api/insight ──────────────────────────────────────────
@@ -63,7 +65,7 @@ app.get('/api/insight', async (req, res) => {
     const prompt = `
         You are a cycling coach, based on this athlete's training data, give me 2-3 sentence insight and one specific recommendation.
 
-        totalHours: ${totalHours} in the last 10 days,
+        totalHours: ${totalHours} in the last 6 workouts,
         currentCTL: ${ctl},
         currentATL: ${atl},
         currentTSB: ${tsb},
@@ -127,7 +129,13 @@ app.get('/auth/callback', async (req, res) => {
     res.send('Strava connected! You can close this tab.')
 })
 
-//HELPERS
+/**
+ * 
+    HELPERS
+ * 
+ */
+
+// Current FTP
 async function fetchFTP() {
     const resp = await fetch(base_url, { headers: {Authorization: auth} });
 
@@ -136,6 +144,7 @@ async function fetchFTP() {
     return data.sportSettings[0].ftp
 }
 
+// Fitness, Form, Fatigue
 async function fetchLatestStats() {
     const resp = await fetch(`${base_url}/wellness?oldest=${ninetyDaysAgo()}`, 
                             { headers: {Authorization: auth} });
@@ -146,19 +155,63 @@ async function fetchLatestStats() {
     return {ctl, atl, tsb};
 }
 
+// Activites from Strava
 async function fetchStravaActivities() {
+    const after = Math.floor(Date.now() / 1000) - (10 * 24 * 60 * 60);
     const token = await getStravaToken();
 
-    const resp = await fetch(   "https://www.strava.com/api/v3/athlete/activities?per_page=10", {
+    const resp = await fetch(   `https://www.strava.com/api/v3/athlete/activities?after=${after}&per_page=50`, {
                                 headers: { Authorization: `Bearer ${token}`}
     })
-    const raw = await resp.json();
-    // const extractedData = await raw.map(act => ({
-    //     distance: act.distance,
-    //     moving_time: act.moving_time
 
-    // }))
+    const raw = await resp.json();
+
     return await raw;
+}
+
+async function fetchPowerZones() {
+    const activities = await fetchStravaActivities();
+    const token = await getStravaToken();
+    const ftp = await fetchFTP();
+
+    const poweredRides = activities.filter(a => a.device_watts);
+
+    const streams = await Promise.all(
+        poweredRides.map(async (activity) => {
+            const resp = await fetch(`https://www.strava.com/api/v3/activities/${activity.id}/streams?keys=watts&resolution=low`, 
+                                    {headers: {Authorization: `Bearer ${token}`}})
+            const data = await resp.json();
+            return { stream: data, movingTime: activity.moving_time };
+        })
+    );
+
+    const zoneTotals = [0, 0, 0, 0, 0, 0, 0];
+    const ZONE_BOUNDARIES = [0, 0.55, 0.75, 0.90, 1.05, 1.20, 1.50];
+
+    streams.forEach(({stream, movingTime}) => {
+        const wattsData = stream.find(s => s.type === 'watts');
+        if (!wattsData) return;
+
+        const secsPerPoint = movingTime / wattsData.data.length;
+
+        wattsData.data.forEach(watts => {
+            const pct = watts/ftp;
+
+            const zoneIndex = ZONE_BOUNDARIES.findLastIndex(b => pct >= b);
+            zoneTotals[zoneIndex] += secsPerPoint;
+        });
+    });
+
+    const zoneNames = ['Active Recovery', 'Endurance', 'Tempo', 'Threshold', 'VO2 Max', 'Anaerobic', 'Neuromuscular'];
+    const zoneColors = ['#94a3b8', '#60a5fa', '#34d399', '#fbbf24', '#f97316', '#ef4444', '#a855f7'];
+
+
+    return zoneTotals.map((seconds, i) => ({
+        zone: i+1,
+        name: zoneNames[i],
+        minutes: Math.round(seconds/60),
+        color: zoneColors[i]
+    }));
 }
 
 async function getStravaToken() {
