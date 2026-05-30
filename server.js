@@ -91,7 +91,7 @@ app.get('/api/insight', async (req, res) => {
     const data = await resp.json();
 
     if (data.error) {
-        return res.json({insight: `API error: ${data.error.messages}`});
+        return res.json({insight: `API error: ${data.error.message}`});
     }
     const insight = data.content[0].text;
     res.json({insight: insight});
@@ -141,7 +141,7 @@ async function fetchFTP() {
 
     const data = await resp.json();
 
-    return data.sportSettings[0].ftp
+    return data.sportSettings.find(s => s.types?.includes('Ride'))?.ftp;
 }
 
 // Fitness, Form, Fatigue
@@ -166,7 +166,7 @@ async function fetchStravaActivities() {
 
     const raw = await resp.json();
 
-    return await raw;
+    return raw;
 }
 
 async function fetchPowerZones() {
