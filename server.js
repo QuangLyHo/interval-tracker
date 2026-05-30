@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 dotenv.config({ override: true });
 import express from 'express';
 import fetch from 'node-fetch';
-import { generateFitnessData, powerZones, summary } from './data/mock.js';
+import { generateFitnessData } from './data/mock.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -19,6 +19,22 @@ const intervals_id = process.env.INTERVALS_ATHLETE_ID;
 const key = process.env.INTERVALS_API_KEY;
 const auth = 'Basic ' + Buffer.from(`API_KEY:${key}`).toString('base64');
 const base_url = `https://intervals.icu/api/v1/athlete/${intervals_id}`;
+
+// -- Cache
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes in milliseconds
+
+const cache = {
+    activities: {data: null, fetchedAt: 0},
+    ftp: {data: null, fetchedAt: 0}
+};
+
+function isFresh(entry) {
+    const fetchedAt = Date.now() - entry.fetchedAt;
+    if (entry.data && fetchedAt < CACHE_TTL) {
+        return true;
+    }
+    return false;
+}
 
 app.get('/api/fitness', async (req, res) => {
   if (USE_MOCK) {
@@ -41,7 +57,6 @@ app.get('/api/fitness', async (req, res) => {
 
 //get power zones
 app.get('/api/zones', async (req, res) => {
-    //   res.json(powerZones);
     const zones = await fetchPowerZones();
     res.json(zones);
 });
@@ -63,9 +78,10 @@ app.get('/api/insight', async (req, res) => {
     const totalHours = (activities.reduce((sum, a) => sum + a.moving_time, 0) / 3600).toFixed(1);
 
     const prompt = `
-        You are a cycling coach, based on this athlete's training data, give me 2-3 sentence insight and one specific recommendation.
+        - You are a cycling coach, based on this athlete's training data, give me 2-3 sentence insight and one specific recommendation. 
+        - You MUST mention in the training insight the total hours in the last 10 days.
 
-        totalHours: ${totalHours} in the last 6 workouts,
+        totalHours: ${totalHours} in the last 10 days,
         currentCTL: ${ctl},
         currentATL: ${atl},
         currentTSB: ${tsb},
@@ -81,7 +97,7 @@ app.get('/api/insight', async (req, res) => {
         },
         body: JSON.stringify({
             model: 'claude-opus-4-5',
-            max_tokens: 200,
+            max_tokens: 350,
             messages: [
                 {role: 'user', content: prompt}
             ]
@@ -137,11 +153,19 @@ app.get('/auth/callback', async (req, res) => {
 
 // Current FTP
 async function fetchFTP() {
+    if (isFresh(cache.ftp)) {
+        return cache.ftp.data;
+    }
+
     const resp = await fetch(base_url, { headers: {Authorization: auth} });
 
     const data = await resp.json();
+    const ftp = data.sportSettings.find(s => s.types?.includes('Ride'))?.ftp;
 
-    return data.sportSettings.find(s => s.types?.includes('Ride'))?.ftp;
+    cache.ftp.data = ftp;
+    cache.ftp.fetchedAt = Date.now();
+
+    return ftp;
 }
 
 // Fitness, Form, Fatigue
@@ -157,6 +181,10 @@ async function fetchLatestStats() {
 
 // Activites from Strava
 async function fetchStravaActivities() {
+    if (isFresh(cache.activities)) {
+        return cache.activities.data;
+    }
+
     const after = Math.floor(Date.now() / 1000) - (10 * 24 * 60 * 60);
     const token = await getStravaToken();
 
@@ -165,6 +193,9 @@ async function fetchStravaActivities() {
     })
 
     const raw = await resp.json();
+
+    cache.activities.data = raw;
+    cache.activities.fetchedAt = Date.now();
 
     return raw;
 }
