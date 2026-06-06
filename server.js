@@ -88,6 +88,9 @@ app.get('/api/insight', async (req, res) => {
         recent ride intensities: ${rideIntensities.map(r => `IF: ${r.if}`).join('\n')}
     `;
 
+    console.log('Prompt being sent:', prompt);
+    console.log('totalHours value:', totalHours);
+
     const resp = await fetch(url, {
         method: 'POST',
         headers: {
