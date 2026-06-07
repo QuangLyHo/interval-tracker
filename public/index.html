@@ -4,52 +4,87 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Cycling Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="style.css" />
-    <!-- Chart.js for drawing the graphs -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   </head>
   <body>
 
+    <!-- Ambient background glow -->
+    <div class="bg-glow"></div>
+
     <header>
-      <h1>🚴 Cycling Analytics</h1>
-      <p class="subtitle">Training load · Power zones · AI insights</p>
+      <div class="header-content">
+        <div class="header-left">
+          <span class="logo">⚡</span>
+          <div>
+            <h1>Cycling Dashboard</h1>
+            <p class="subtitle">Strava · intervals.icu · Claude AI</p>
+          </div>
+        </div>
+        <div class="live-badge">Live</div>
+      </div>
     </header>
 
     <main>
 
-      <!-- Row 1: stat chips -->
+      <!-- Stat chips -->
       <section id="stats-row">
         <div class="stat-card">
-          <span class="stat-label">Fitness (CTL)</span>
-          <span class="stat-value" id="stat-ctl">—</span>
+          <div class="stat-icon blue">📈</div>
+          <div class="stat-info">
+            <span class="stat-label">Fitness (CTL)</span>
+            <span class="stat-value" id="stat-ctl">—</span>
+          </div>
         </div>
         <div class="stat-card">
-          <span class="stat-label">Fatigue (ATL)</span>
-          <span class="stat-value" id="stat-atl">—</span>
+          <div class="stat-icon red">🔥</div>
+          <div class="stat-info">
+            <span class="stat-label">Fatigue (ATL)</span>
+            <span class="stat-value" id="stat-atl">—</span>
+          </div>
         </div>
         <div class="stat-card">
-          <span class="stat-label">Form (TSB)</span>
-          <span class="stat-value" id="stat-tsb">—</span>
+          <div class="stat-icon green">⚡</div>
+          <div class="stat-info">
+            <span class="stat-label">Form (TSB)</span>
+            <span class="stat-value" id="stat-tsb">—</span>
+          </div>
         </div>
       </section>
 
-      <!-- Row 2: fitness chart -->
-      <section class="card">
-        <h2>Fitness Trend — last 90 days</h2>
-        <canvas id="fitness-chart"></canvas>
-      </section>
+      <!-- Charts — side by side -->
+      <div class="charts-row">
+        <section class="card">
+          <div class="card-header">
+            <h2>Fitness Trend</h2>
+            <span class="card-badge">90 days</span>
+          </div>
+          <canvas id="fitness-chart"></canvas>
+        </section>
 
-      <!-- Row 3: power zones -->
-      <section class="card">
-        <h2>Power Zone Distribution — last 6 workouts</h2>
-        <canvas id="zones-chart"></canvas>
-      </section>
+        <section class="card">
+          <div class="card-header">
+            <h2>Power Zones</h2>
+            <span class="card-badge">Last 10 days</span>
+          </div>
+          <canvas id="zones-chart"></canvas>
+        </section>
+      </div>
 
-      <!-- Row 4: AI insight -->
+      <!-- AI Insight -->
       <section class="card" id="insight-card">
-        <h2>🤖 AI Training Insight</h2>
-        <p id="insight-text">Loading…</p>
+        <div class="card-header">
+          <h2>🤖 AI Coaching Insight</h2>
+          <span class="card-badge">Claude</span>
+        </div>
+        <div id="insight-text">
+          <div class="skeleton-line"></div>
+          <div class="skeleton-line short"></div>
+          <div class="skeleton-line"></div>
+          <div class="skeleton-line medium"></div>
+        </div>
       </section>
 
     </main>

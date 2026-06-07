@@ -80,6 +80,7 @@ app.get('/api/insight', async (req, res) => {
     const prompt = `
         - You are a cycling coach, based on this athlete's training data, give me 2-3 sentence insight and one specific recommendation. 
         - You MUST mention in the training insight the total hours in the last 10 days.
+        - Give a description of the last activity, and the date of said activity, and its impact on the overall training prior to it.
 
         totalHours: ${totalHours} in the last 10 days,
         currentCTL: ${ctl},
@@ -88,8 +89,8 @@ app.get('/api/insight', async (req, res) => {
         recent ride intensities: ${rideIntensities.map(r => `IF: ${r.if}`).join('\n')}
     `;
 
-    console.log('Prompt being sent:', prompt);
-    console.log('totalHours value:', totalHours);
+    // console.log('Prompt being sent:', prompt);
+    // console.log('totalHours value:', totalHours);
 
     const resp = await fetch(url, {
         method: 'POST',
@@ -100,7 +101,7 @@ app.get('/api/insight', async (req, res) => {
         },
         body: JSON.stringify({
             model: 'claude-opus-4-5',
-            max_tokens: 350,
+            max_tokens: 450,
             messages: [
                 {role: 'user', content: prompt}
             ]
